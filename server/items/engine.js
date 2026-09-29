@@ -11,22 +11,21 @@ function fillInventory(player, randomInt, id, { excluded = [], size = 3 } = {}) 
 }
 
 function validate(game, player, message) {
-  if (game.status !== 'review') return 'Choose your power-up during answer review.';
-  if (game.reviewStage !== 'ready' || game.presentations.busy) return 'Wait for the answer and power-up reveals to finish.';
+  if (!game.itemWindowOpen()) return 'Use your power-up during the question preview, before the host starts the countdown.';
   if (message.roundId !== game.round?.id) return 'That question has already ended.';
+  if (!game.round.participants.has(player.id)) return 'You joined mid-question. You’re in for the next one.';
   if (player.usedItemRound === game.round.id) return 'One power-up per question. Make it count!';
   const slot = player.inventory.find(item => item.id === message.itemId);
   if (!slot || !byId[slot.type]) return 'That power-up is no longer in your backpack.';
   const item = byId[slot.type];
   if (item.maxUsesPerGame && (game.itemUses[item.id] || 0) >= item.maxUsesPerGame) return 'That room-wide power-up has already been used this game.';
-  if (item.kind === 'next' && game.index >= game.questions.length - 1) return 'There are no more questions to use that on.';
   if (item.target) {
     const target = game.players.get(message.targetId);
-    if (!target || target.id === player.id || !target.connected) return 'Choose another connected racer.';
-    if (slot.type === 'siphon' && [...game.players.values()].some(p => p.armed?.type === slot.type && p.armed.targetId === target.id)) return 'That racer already has Siphon Points aimed at them.';
+    if (!target || target.id === player.id || !target.connected || !game.round.participants.has(target.id)) return 'Choose another connected racer in this question.';
+    if (slot.type === 'siphon' && [...game.round.items.values()].some(item => item.type === slot.type && item.targetId === target.id)) return 'That racer already has Siphon Points aimed at them.';
   }
-  if (slot.type === 'copycat' && ![...game.players.values()].some(p => p.id !== player.id && p.connected)) return 'You need another racer to copy.';
-  if (item.global && [...game.players.values()].some(p => p.armed?.type === slot.type)) return 'That global power-up is already queued.';
+  if (slot.type === 'copycat' && ![...game.players.values()].some(p => p.id !== player.id && p.connected && game.round.participants.has(p.id))) return 'You need another racer to copy.';
+  if (item.global && [...game.round.items.values()].some(active => active.type === slot.type)) return 'That global power-up is already active.';
   if (item.wager && (!Number.isInteger(message.amount) || message.amount < 1 || message.amount > Math.min(1000, player.score))) return 'Bet 1–1,000 points, up to your available score.';
   return handlers[slot.type].validate?.(player) || null;
 }

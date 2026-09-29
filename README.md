@@ -71,6 +71,26 @@ D: 8
 ANSWER: B
 ````
 
+Answer choices can also span multiple lines and contain fenced code. Put the next choice label outside the closing fence:
+
+````text
+QUESTION: Which expression calculates the total?
+A: ```js
+scores.map(score => score * 2);
+```
+B: ```js
+scores.reduce(
+  (sum, score) => sum + score,
+  0
+);
+```
+C: No result
+D: None of the above
+ANSWER: B
+````
+
+Indentation and blank lines inside fences are preserved; even `QUESTION:` or `ANSWER:` inside code stays literal. Text and code automatically fit the question/answer area. Extremely long snippets stop shrinking at a readable minimum and scroll within their own area instead of moving the header/footer or clipping content. Fences are plain code formatting, not executable HTML or syntax highlighting.
+
 Restart RibBit after changing the question file so the server reloads the timer and questions.
 
 The server validates the complete file before it starts. Every question must have a prompt, four choices, and an answer.
@@ -97,13 +117,17 @@ The server validates the complete file before it starts. Every question must hav
 
 ## Power-ups
 
-After each answer review, each player has up to three random, distinct items. Pick a card, choose a target or wager if needed, then confirm. One use per review; no cancellation after confirmation. Unused cards carry over. Consumed slots refill **after the following question**, not immediately. The first question has no items. Hosts should give players time to make selections before clicking Next.
+Every question—including the first and last—starts with up to three random, distinct items. While the host previews the question on the green screen, players pick a card, choose a target or wager if needed, and click **Use now**. It applies to **this question**, never a later one. One use per question; no cancellation. Unused cards carry over and consumed slots refill after review. Items cannot be selected during countdown, answering, or answer review.
 
 ### Announcements and timing
 
-Loud next-question powers each get their own **five-second** spotlight after the green countdown/reveal, before answering opens. Every spotlight shows the emoji, power name, caster’s racer name and description. The server owns the queue and clock; host and players see the same active entry. Announcements consume no answering time.
+The green circle first fills the screen and the host question slides in from above. Players see their backpack, not the question. Using a loud power immediately gives it a **five-second** host spotlight on the green background, sliding up from the bottom into the center and back down. Concurrent uses announce one at a time; players can still use items during other racers’ spotlights. Each shows the emoji, name, caster’s racer name and description. The host gets tailored third-person narration (for example, “If 6 or more people get this question wrong, Lily will get double question points”); players keep their own descriptions. Silent powers remain hidden until answer review.
 
-The correct answer stays on screen for five seconds (including the host’s existing fade-to-black for incorrect choices). Then silent powers and score-changing results reveal individually. Future silent announcements and unrevealed coin results are not sent to clients. Final item adjustments commit when the result queue finishes; the swipeable leaderboard and backpack then become available. Instant powers such as cash-in and casino run during that same review period. Next is disabled during presentations; reset remains available.
+After each set of spotlights, the **host-only** question preview returns and stays indefinitely. Once announcements finish, the host presses **Space** to close item selection and start a shared white **3, 2, 1** pulse below the question. Players see “Get ready” and the same countdown, never the question. Repeated Space presses do not restart it; Space outside the preview does not advance the quiz. The preview fades out in 220ms, then the circular mask expands to reveal the answer grid. The prompt remains on the host’s normal question screen; it is omitted entirely from player payloads. The final leaderboard has only the cover/reveal, with no question preview/countdown. Nope! also skips the preview for its skipped question.
+
+The server publishes absolute phase timestamps so host, phones, and reconnecting players stay on the same timeline. The question clock and answer input stay locked through the preview and mask reveal; Cold Feet’s caster-only answering window comes afterward. Intros consume no answering time.
+
+The correct answer stays on screen for five seconds (including the host’s existing fade-to-black for incorrect choices). Then silent powers and score-changing results reveal individually. Future silent announcements and unrevealed coin results are not sent to clients. Final question adjustments commit after their result queue. Cash-in, streak boosts, trophy, and casino chosen in the preview then resolve during review. Streak powers use the surviving streak after the answer; if it ended, the card is returned. Casino wagers are capped again against the remaining score before the hand starts. The swipeable leaderboard becomes available once all results finish. Next is disabled during presentations; reset remains available.
 
 Interactive exceptions: the coin’s owner can tap to flip, with an automatic flip after eight seconds; a blackjack hand auto-stands after 20 seconds. Their results hold for three seconds. Disconnecting cannot strand the queue.
 
@@ -111,23 +135,23 @@ With 30 loud activations, **30 × 5 seconds = 150 seconds of announcements**. Th
 
 | Item | Visibility | What happens |
 | --- | --- | --- |
-| 🦜 Trust Them | Loud | Copies the highest-scoring other participant’s original answer and server-measured speed, not their item bonuses. Target locks at question start; ties use racer name. No original answer: item returned; no recursive copy chains. |
+| 🦜 Trust Them | Loud | Copies the highest-scoring other participant’s original answer and server-measured speed, not their item bonuses. Target locks when used; ties use racer name. No original answer: item returned; no recursive copy chains. |
 | 🪙 Double or Nothing | Loud | After-answer interactive coin flip: double positive question points or earn zero. A correct answer still counts toward the streak. |
 | 🧲 Siphon Points | Loud | Absorb 50% of a target’s signed question score; share their loss if negative. One siphon per target. After-answer animation shows both racers and the transfer. |
 | 🤖 Walker's Weapon | Loud | Privately streams the correct answer one word every 350ms. A scripted joke chatbot, **no AI API or cost**. |
 | 🧊 Cold Feet | Loud | For three seconds only its user can answer; other players are frozen and the clock pauses. Reverse gives the reverser that exemption and freezes the original caster. |
-| 🔥 Hot Streak | Loud, instant | Streak cash-out value ×5, capped at ×25. A phoenix replaces the streak icon until it dies or is cashed in. Does not multiply normal answer points. |
-| 💧 Water | Loud | After the next answer, clear everyone else’s streak/multiplier. Yours survives unless reversed. Existing points stay. |
-| ⏱️ Think Fast | Loud | Exactly ten answering seconds on the next question. Announcements and Cold Feet’s pause do not consume them. |
-| 🏦 Cash in Streak | Loud, instant | Show the streak turning into 100 × streak × boost points, then clear it. |
-| 🃏 Pond Casino | Loud, instant | Owner plays blackjack on their device; everyone watches the same hand. Bet 1–1,000 quiz points, up to your score. Hit/stand, dealer stands on all 17s, wins pay 1:1, ties return the wager. No real money. |
-| 🦘 Nope! | Loud | Skip the next question for everyone, keeping scores/streaks and refunding other queued powers. Skipping the final question finishes the quiz. |
+| 🔥 Hot Streak | Loud, after answer | Streak cash-out value ×5, capped at ×25. A phoenix replaces the streak icon until it dies or is cashed in. Does not multiply normal answer points. |
+| 💧 Water | Loud | After this answer, clear everyone else’s streak/multiplier. Yours survives unless reversed. Existing points stay. |
+| ⏱️ Think Fast | Loud | Exactly ten answering seconds on this question. Announcements and Cold Feet’s pause do not consume them. |
+| 🏦 Cash in Streak | Loud, after answer | Show the streak turning into 100 × streak × boost points, then clear it. |
+| 🃏 Pond Casino | Loud, after answer | Owner plays blackjack on their device; everyone watches the same hand. Bet 1–1,000 quiz points, up to your score. Hit/stand, dealer stands on all 17s, wins pay 1:1, ties return the wager. No real money. |
+| 🦘 Nope! | Loud | Skip this question for everyone, keeping scores/streaks and refunding other used powers. Skipping the final question finishes the quiz. |
 | 🍭 Sucker | Loud | Six or more wrong answers double your positive question points. Unanswered and personally skipped questions do not count as wrong answers. |
 | 🧑‍💼 The Intern | Loud | Automatically answers with exactly 50% chance of being right. Correct pays **1.5×**. |
 | 🥔 Hot Potato | Loud | Tap to pass to a random connected rival, even after answering. The final holder gets half their positive question points. Announce activation and final outcome only, never individual passes. |
 | 🔮 Prediction | Silent | Predict the first **manual** answerer; double your positive question points if correct. |
 | 🐸 Ribbit | Silent | Everyone displays as Frog on the next leaderboard. Identities and scores remain unchanged. |
-| 🏆 Participation Trophy | Silent, instant | Claim first on the final **podium only**. Displayed score, score-ranked standings and exported results remain authentic. |
+| 🏆 Participation Trophy | Silent, after answer | Claim first on the final **podium only**. Displayed score, score-ranked standings and exported results remain authentic. |
 | 🧾 Taxes | Loud | Racers ranked above you at question start each contribute 100 points. Reverse redirects the affected racer’s contribution back from the caster. |
 | 🪞 Uno Reverse Card | Silent | Reflect the first attack against you, with no recursive bouncing. Cold Feet/Water transfer caster immunity to you; targeted attacks return to their sender. |
 | 🐚 Blue Shell | Loud | First manual answerer gets half their positive question points. Automated Intern/Skip answers do not trigger it. |
@@ -135,7 +159,7 @@ With 30 loud activations, **30 × 5 seconds = 150 seconds of announcements**. Th
 | ⌨️ 200WPM | Loud | Correct within five scoring seconds: double question points. |
 | ⏭️ Skip | Silent | Skip only your own question, gain 500 points and preserve your streak. Separate from room-wide Nope! |
 
-Lights Out has been removed. Multipliers apply to **question points**, not accumulated scores. Next-question items are unavailable on final review; instant ones still work. Identical globals cannot stack. **Nope!, Water and Participation Trophy each have a shared one-use-per-game limit**; exhausted copies are replaced and stop dropping. Tune rarity weights and caps in `shared/items.json`.
+Lights Out has been removed. Multipliers apply to **question points**, not accumulated scores. All items can be selected during the final question’s preview, but never after the final answer. Identical globals cannot stack. **Nope!, Water and Participation Trophy each have a shared one-use-per-game limit**; exhausted copies are replaced and stop dropping. Tune rarity weights and caps in `shared/items.json`.
 
 Scoring order: original answers/speed → Trust Them resolution → base points and personal multipliers → Blue Shell/potato penalties → snapshot-based signed siphons and fixed taxes → Water/streak changes. Siphon chains conserve points. Base points appear in answer review; planned item adjustments stay private until their reveal. Wrong/unanswered questions break streaks and boosts, except explicit skips. `WRONG_ANSWER_PENALTY=100` optionally makes wrong answers cost 100; default is 0.
 
@@ -148,9 +172,13 @@ All ownership, targets, randomness, timings and scores are server-authoritative.
 - `server/items/`: individual handlers, attack reflection, validation and inventory commands.
 - `server/game.js`: lifecycle, authoritative clock, activation, private state and interactive actions.
 - `server/presentations.js`: ordered server-timed spotlight queue; serializes only the current entry.
+- `server/questions.js`: question-file parser for multiline prompts and choices with fenced code.
+- `server/items/host-description.js`: power-specific host narration.
 - `server/settlement.js`: plans results once, then commits final adjustments after reveals.
 - `src/components/PowerUps.jsx`: backpack, targeting/wager controls and in-question effects.
 - `src/components/PowerUpPresentation.jsx`: shared host/player announcements, coin, transfers, casino and podium.
+- `src/components/QuestionTransition.jsx`: full-green power intro, host question preview, countdown and circle reveal.
+- `src/components/QuizContent.jsx`: reusable, measured-to-fit prose/code renderer for prompts, answers and review.
 - `server/test/game.test.js`: injected-clock/RNG tests for scoring, privacy, interactions and 30 queued announcements.
 
 Add metadata and a handler, register it in `server/items/index.js`, wire the relevant lifecycle/settlement stage, then test conflicts, disconnects, final-question behavior and private-state serialization. Never send decks, credentials or future hint text to clients.

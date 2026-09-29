@@ -9,12 +9,13 @@ const os = require('node:os');
 const fs = require('node:fs/promises');
 const crypto = require('node:crypto');
 const WebSocket = require('ws');
+const timing = require('../../shared/timing.json');
 
-test('real transport: protected host, 30 racers, all four questions, reconnect, export and reset', { timeout: 70000 }, async t => {
+test('real transport: protected host, 30 racers, items in preview, Space countdown, reconnect, export and reset', { timeout: 80000 }, async t => {
   const probe = net.createServer(); probe.listen(0, '127.0.0.1'); await once(probe, 'listening');
   const port = probe.address().port; await new Promise(resolve => probe.close(resolve));
   const folder = await fs.mkdtemp(path.join(os.tmpdir(), 'ribbit-transport-'));
-  const server = spawn(process.execPath, ['server.js', '--port', String(port)], {
+  const server = spawn(process.execPath, ['--require', path.join(__dirname, 'seed.cjs'), 'server.js', '--port', String(port)], {
     cwd: path.resolve(__dirname, '../..'),
     env: { ...process.env, HOST_PIN: 'integration-only-pin', RESULTS_FILE: path.join(folder, 'results.txt') }, stdio: ['ignore', 'pipe', 'pipe']
   });
@@ -55,6 +56,28 @@ test('real transport: protected host, 30 racers, all four questions, reconnect, 
   for (let index = 0; index < 4; index++) {
     await host.wait(m => m.type === 'state' && m.state.status === 'question' && m.state.questionNumber === index + 1);
     await Promise.all(players.map(p => p.wait(m => m.type === 'state' && m.state.status === 'question' && m.state.questionNumber === index + 1)));
+    assert.equal(host.state.questionStartedAt, null);
+    assert.equal(host.state.intro.countdownAt, null);
+    assert.ok(players.every(p => p.state.question.prompt === undefined && p.state.player.inventory.length === 3));
+    await new Promise(resolve => setTimeout(resolve, Math.max(0, host.state.intro.previewAt + timing.pan - Date.now() + 50)));
+    if (index === 0) {
+      const owner = players[0];
+      const item = owner.state.player.inventory.find(slot => slot.type === 'whisper');
+      const requestId = crypto.randomUUID();
+      owner.send({ type: 'use-item', itemId: item.id, requestId });
+      await owner.wait(m => m.type === 'ack' && m.requestId === requestId);
+      await host.wait(m => m.type === 'state' && m.state.presentation?.type === 'whisper');
+      assert.equal(owner.state.player.activeItem, 'whisper');
+      assert.equal(host.state.questionStartedAt, null);
+      await new Promise(resolve => setTimeout(resolve, Math.max(0, host.state.intro.previewAt + timing.pan - Date.now() + 100)));
+    }
+    const forged = crypto.randomUUID();
+    players[0].send({ type: 'start-countdown', requestId: forged });
+    await players[0].wait(m => m.type === 'error' && m.requestId === forged);
+    host.send({ type: 'start-countdown' });
+    const started = m => m.type === 'state' && m.state.status === 'question' && m.state.questionNumber === index + 1 && m.state.intro.countdownAt !== null;
+    await host.wait(started); await Promise.all(players.map(p => p.wait(started)));
+    assert.ok(players.every(p => p.state.intro.countdownAt === host.state.intro.countdownAt && p.state.answerOpensAt === host.state.answerOpensAt));
     await new Promise(resolve => setTimeout(resolve, Math.max(0, host.state.questionStartedAt - Date.now() + 30)));
     const answerIndex = host.state.question.correctIndex;
     players.forEach(p => p.send({ type: 'answer', answerIndex }));

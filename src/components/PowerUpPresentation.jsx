@@ -5,7 +5,7 @@ import './presentations.css';
 const meta = Object.fromEntries(catalog.map(item => [item.id, item]));
 const signed = n => `${n >= 0 ? '+' : ''}${n.toLocaleString()}`;
 
-export function PowerUpPresentation({ game, onAction, pending, overlay = false }) {
+export function PowerUpPresentation({ game, onAction, pending, overlay = false, host = false }) {
   const now = useGameNow(game), event = game.presentation;
   if (!event) return null;
   const data = event.data || {}, owner = game.player?.id === event.casterId;
@@ -16,7 +16,7 @@ export function PowerUpPresentation({ game, onAction, pending, overlay = false }
       <p className="presentation-kicker">{event.phase === 'activation' ? '📣 Power-up incoming' : meta[event.type]?.visibility === 'silent' ? '🤫 Secret power revealed' : 'The results are in'}</p>
       <span className="presentation-emoji" aria-hidden="true">{event.emoji}</span>
       <p className="presentation-racer">{event.casterName}</p>
-      <h2>{event.name}</h2><p className="presentation-description">{event.description}</p>
+      <h2>{event.name}</h2><p className="presentation-description">{host ? event.hostDescription || event.description : event.description}</p>
       {event.mode === 'coin' ? <div className="coin-stage">
         <div className={`big-coin${event.flipped ? ' coin-flipping' : ''}`} key={event.flipped ? 'flipped' : 'ready'}>{event.flipped ? data.heads ? '2×' : '0×' : '?'}</div>
         {event.flipped ? <><h3>{data.heads ? 'Heads!' : 'Tails!'}</h3><p>{data.before} → <strong>{data.after} question points</strong></p></> : <>{owner ? <button className="primary join-submit" disabled={pending} onClick={() => onAction({ type: 'flip-coin', presentationId: event.id })}>Flip my coin 🪙</button> : <p>{event.casterName} is flipping their coin…</p>}<small>Automatically flips in {remaining}s</small></>}

@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useGameSocket } from './useGameSocket';
-import { ItemTray, RoundEffects, getRoundEffect, useGameNow } from './components/PowerUps';
+import { RoundEffects, getRoundEffect, useGameNow } from './components/PowerUps';
 import { PowerUpPresentation, Podium } from './components/PowerUpPresentation';
+import { QuestionTransition } from './components/QuestionTransition';
+import { QuizContent } from './components/QuizContent';
 import timing from '../shared/timing.json';
 
 function App() {
@@ -31,12 +33,19 @@ function App() {
     } else {
       const newQuestion = game.status === 'question' && game.roundId !== old?.roundId;
       const final = game.status === 'finished' && old?.status !== 'finished';
-      const startAt = game.transitionAt - (game.clockOffset || 0);
-      const duration = timing.cover + timing.reveal + (newQuestion ? timing.countdown : 0);
-      if ((newQuestion || final) && startAt + duration > Date.now()) {
+      const now = Date.now() + (game.clockOffset || 0);
+      const coveredAt = game.transitionAt + timing.cover;
+      const intro = newQuestion ? game.intro : {
+        startAt: game.transitionAt, coveredAt, previewAt: coveredAt,
+        previewEndsAt: coveredAt, revealAt: coveredAt, endsAt: coveredAt + timing.reveal
+      };
+      if ((newQuestion || final) && intro && (intro.endsAt === null || intro.endsAt > now)) {
         active.current = true;
-        setTransition({ key: game.roundId + game.status, startAt, countdown: newQuestion });
-      } else if (!active.current) setDisplayGame(game);
+        setTransition({ key: game.roundId + game.status, question: newQuestion, intro });
+      } else {
+        if (active.current && game.intro) setTransition(current => current ? { ...current, intro: game.intro } : current);
+        if (!active.current || now >= coveredAt) setDisplayGame(game);
+      }
     }
     previous.current = game;
   }, [game]);
@@ -60,11 +69,13 @@ function App() {
   const fullScreen = ['question', 'review'].includes(displayGame?.status) || screen === 'host';
 
   return <div className={`app${fullScreen ? ' question-app' : ''}`}>
+    <div style={{ display: 'contents' }} inert={!!transition}>
     {screen === 'join' && <Join onSubmit={join} />}
     {screen === 'host' && (needsPin ? <HostAccess onSubmit={pin => connect('host', { pin })} /> : <Host game={displayGame} onAction={send} transitioning={!!transition} />)}
     {screen === 'player' && <Player game={displayGame} onAnswer={answerIndex => send({ type: 'answer', answerIndex })} onAction={send} pending={pending} answerError={answerError} />}
-    {transition && <QuestionTransition key={transition.key} startAt={transition.startAt} showCountdown={transition.countdown} onCover={showQuestion} onDone={finishTransition} />}
-    {screen === 'player' && game?.presentation && <PowerUpPresentation game={game} onAction={send} pending={pending} overlay />}
+    </div>
+    {transition && <QuestionTransition key={transition.key} intro={transition.question ? game.intro || transition.intro : transition.intro} game={game} host={screen === 'host'} onAction={send} pending={pending} onCover={showQuestion} onDone={finishTransition} />}
+    {screen === 'player' && game?.presentation && game.presentation.phase !== 'activation' && <PowerUpPresentation game={game} onAction={send} pending={pending} overlay />}
     {attentionAlert && <div className="attention-alert" role="alert">{attentionAlert}</div>}
     {connection && <div className="connection-banner" role="status">{connection}</div>}
     {toast && <div className="toast" role="status">{toast}</div>}
@@ -102,44 +113,6 @@ function Player({ game, onAnswer, onAction, pending, answerError }) {
   return <Finished game={game} />;
 }
 
-function QuestionPrompt({ text, className }) {
-  const segments = [];
-  let textLines = [];
-  let codeLines = null;
-
-  const flushText = () => {
-    if (textLines.length > 0) {
-      segments.push({ type: 'text', value: textLines.join('\n') });
-      textLines = [];
-    }
-  };
-
-  for (const line of String(text || '').split('\n')) {
-    if (line.trim().startsWith('```')) {
-      if (codeLines) {
-        segments.push({ type: 'code', value: codeLines.join('\n') });
-        codeLines = null;
-      } else {
-        flushText();
-        codeLines = [];
-      }
-      continue;
-    }
-    if (codeLines) codeLines.push(line);
-    else textLines.push(line);
-  }
-
-  if (codeLines) segments.push({ type: 'code', value: codeLines.join('\n') });
-  flushText();
-
-  return (
-    <div className={className} role="heading" aria-level="1">
-      {segments.map((segment, index) => segment.type === 'code'
-        ? <pre className="question-prompt-code" key={`code-${index}`}><code>{segment.value}</code></pre>
-        : <span className="question-prompt-text" key={`text-${index}`}>{segment.value}</span>)}
-    </div>
-  );
-}
 
 function QuestionScreen({ game, onAnswer, answerError, onAction, pending }) {
   const [selected, setSelected] = useState(null);
@@ -151,7 +124,7 @@ function QuestionScreen({ game, onAnswer, answerError, onAction, pending }) {
     setSubmitted(false);
   }, [game.roundId, answerError]);
   const answered = game.player.answered || selected !== null;
-  const locked = answered || game.presentationBusy || now < game.player.answerOpensAt || now >= game.questionEndsAt || game.player.spectator || ['copycat', 'intern', 'personal-skip'].includes(game.player.activeItem);
+  const locked = answered || game.player.answerOpensAt === null || game.presentationBusy || now < game.player.answerOpensAt || now >= game.questionEndsAt || game.player.spectator || ['copycat', 'intern', 'personal-skip'].includes(game.player.activeItem);
   const submitAnswer = (index) => {
     if (locked) return;
     if (!onAnswer(index)) return;
@@ -165,7 +138,7 @@ function QuestionScreen({ game, onAnswer, answerError, onAction, pending }) {
         <div className="answer-quadrants">
           {game.question.choices.map((choice, index) => (
             <button key={index} className={`quadrant-answer quadrant-${index + 1}${selected === index ? ' selected' : ''}`} disabled={locked} onClick={() => submitAnswer(index)}>
-              <span className="quadrant-text">{choice}</span>
+              <QuizContent className="answer-content" text={choice} fit />
             </button>
           ))}
         </div>
@@ -184,11 +157,12 @@ function Review({ game, onAction, pending }) {
         <div className={`result-icon ${correct || game.skipped || personalSkip ? '' : 'wrong'}`}>{game.skipped ? '🦘' : personalSkip ? '⏭️' : correct ? '✓' : '×'}</div>
         <p className="eyebrow">Question {game.questionNumber} complete</p>
         <h2>{game.skipped ? 'Nope. Next one!' : personalSkip ? 'Taking the shortcut.' : correct ? 'Great answer.' : 'Not this time.'}</h2>
-        <p className="lede">{game.skipped ? 'Question skipped. Streaks safe. Queued items returned.' : personalSkip ? 'You skipped this one. Your streak is safe.' : correct ? `You earned ${game.player.lastQuestionPoints} ${game.scoresPending ? 'base ' : ''}points.` : `The correct answer was ${game.question.choices[game.question.correctIndex]}.`}</p>
+        <p className="lede">{game.skipped ? 'Question skipped. Streaks safe. Other items returned.' : personalSkip ? 'You skipped this one. Your streak is safe.' : correct ? `You earned ${game.player.lastQuestionPoints} ${game.scoresPending ? 'base ' : ''}points.` : 'The correct answer was'}</p>
+        {!correct && !personalSkip && !game.skipped && <QuizContent className="correct-answer-content" text={game.question.choices[game.question.correctIndex]} />}
         <div className="score-box"><span>Your score</span><strong>{game.player.score}</strong><small>{game.player.lastQuestionPoints >= 0 ? '+' : ''}{game.player.lastQuestionPoints} this question</small></div>
         {game.player.streak > 0 && <p className="streak-summary">{game.player.streakIcon} {game.player.streak} in a row{game.player.streakMultiplier > 1 ? ` · ×${game.player.streakMultiplier} cash-out boost` : ''}</p>}
         <div className="review-notes">{game.player.breakdown?.notes.map((note, i) => <span key={i}>{note}</span>)}</div>
-        {game.reviewStage === 'ready' ? <ItemTray game={game} onAction={onAction} pending={pending} /> : <p className="reveal-waiting">{game.reviewStage === 'answer' ? 'Power-up results are up next…' : 'Let the powers do their thing…'}</p>}
+        {game.reviewStage !== 'ready' && <p className="reveal-waiting">{game.reviewStage === 'answer' ? 'Power-up results are up next…' : 'Let the powers do their thing…'}</p>}
       </div>
     </main>
   );
@@ -220,7 +194,7 @@ function Host({ game, onAction, transitioning }) {
   const resetLobby = () => onAction({ type: 'reset' });
   const footerText = lobby
     ? `${players.length} racer${players.length === 1 ? '' : 's'} joined`
-    : finished ? 'Quiz complete' : game.presentationBusy ? 'Power-up in the spotlight…' : review && game.reviewStage !== 'ready' ? 'Correct answer · Power-up reveals next' : review ? 'Choose your power-ups · Swipe for standings →' : `${game.answeredCount} of ${game.connectedCount} answered`;
+    : finished ? 'Quiz complete' : game.presentationBusy ? 'Power-up in the spotlight…' : review && game.reviewStage !== 'ready' ? 'Correct answer · Power-up reveals next' : review ? 'Swipe for standings →' : `${game.answeredCount} of ${game.connectedCount} answered`;
 
   return (
     <main className={`question-screen host-share-screen${lobby ? ' host-lobby-screen' : ''}`}>
@@ -228,13 +202,13 @@ function Host({ game, onAction, transitioning }) {
         <header className="host-share-header">
           <span>{finished ? 'Quiz complete' : `Question ${game.questionNumber} / ${game.totalQuestions}`}</span>
           {status === 'question'
-            ? <TimeLeft seconds={Math.min(game.questionSeconds, Math.max(0, Math.ceil((game.questionEndsAt - now) / 1000)))} onReset={resetLobby} disabled={transitioning} />
+            ? <TimeLeft seconds={game.questionEndsAt === null ? game.questionSeconds : Math.min(game.questionSeconds, Math.max(0, Math.ceil((game.questionEndsAt - now) / 1000)))} onReset={resetLobby} disabled={transitioning} />
             : <TimeLeft seconds={0} onReset={resetLobby} disabled={transitioning} />}
         </header>
       )}
       {lobby
         ? <HostLobbyDisplay players={players} title={game?.questionFile?.replace(/\.txt$/i, '')} />
-        : game.presentation ? <PowerUpPresentation game={game} onAction={onAction} /> : finished ? (
+        : game.presentation && game.presentation.phase !== 'activation' ? <PowerUpPresentation game={game} onAction={onAction} host /> : finished ? (
           <div className="host-final-body final-results">
             <Podium players={game.podiumPlayers} frog={game.frogLeaderboard} />
             <div className="final-standings"><LeaderboardRows players={players} revealNames frog={game.frogLeaderboard} /></div>
@@ -288,11 +262,11 @@ function HostQuestionDisplay({ game, review }) {
     <div className="host-share-scroll" aria-label="Question and leaderboard">
       <div className="host-share-panel host-share-middle">
         {game.skipped ? <div className="skipped-message"><span>🦘</span><h2>Nope. Next one!</h2><p>Question skipped. Everyone keeps their streak.</p></div> : <>
-        <QuestionPrompt className="host-question-prompt" text={game.question.prompt} />
+        <QuizContent className="host-question-prompt" text={game.question.prompt} fit heading />
         <div className="answer-quadrants host-answer-quadrants">
           {game.question.choices.map((choice, index) => (
             <div className={`quadrant-answer quadrant-${index + 1}${review && game.question.correctIndex !== index ? ' incorrect' : ''}`} key={index}>
-              <span className="quadrant-text">{choice}</span>
+              <QuizContent className="answer-content" text={choice} fit />
             </div>
           ))}
         </div>
@@ -338,112 +312,5 @@ function TimeLeft({ seconds, onReset, disabled }) {
   );
 }
 
-function QuestionTransition({ onCover, onDone, startAt, showCountdown = false }) {
-  const [phase, setPhase] = useState('cover');
-  const [coverProgress, setCoverProgress] = useState(0);
-  const [maskProgress, setMaskProgress] = useState(0);
-  const [countdown, setCountdown] = useState(null);
-  const coverScale = Math.hypot(window.innerWidth, window.innerHeight) / 100 + 1;
-  const maskRadius = Math.hypot(window.innerWidth, window.innerHeight) / 2 + 1;
-
-  useEffect(() => {
-    let frame;
-    let hasSwappedComponent = false;
-    let hasStartedMask = !showCountdown;
-    let hasFinished = false;
-    const transitionStart = Number.isFinite(startAt) ? startAt : Date.now();
-    const coverDuration = timing.cover;
-    const countdownDuration = showCountdown ? timing.countdown : 0;
-    const maskDuration = timing.reveal;
-    const maskStart = coverDuration + countdownDuration;
-
-    const ease = (value) => value < 0.5
-      ? 2 * value * value
-      : 1 - Math.pow(-2 * value + 2, 2) / 2;
-    const animate = (timestamp) => {
-      const elapsed = Date.now() - transitionStart;
-
-      if (elapsed < 0) {
-        setCoverProgress(0);
-        frame = window.requestAnimationFrame(animate);
-        return;
-      }
-
-      if (elapsed < coverDuration) {
-        setCoverProgress(ease(elapsed / coverDuration));
-        frame = window.requestAnimationFrame(animate);
-        return;
-      }
-
-      if (!hasSwappedComponent) {
-        hasSwappedComponent = true;
-        setCoverProgress(1);
-        onCover();
-        if (showCountdown) {
-          setCountdown(3);
-          setPhase('countdown');
-        } else {
-          setPhase('reveal');
-        }
-      }
-
-      if (showCountdown && elapsed < maskStart) {
-        const countdownElapsed = elapsed - coverDuration;
-        const nextCountdown = 3 - Math.floor(countdownElapsed / 1000);
-        setCountdown(nextCountdown > 0 ? nextCountdown : null);
-        frame = window.requestAnimationFrame(animate);
-        return;
-      }
-
-      if (!hasStartedMask) {
-        hasStartedMask = true;
-        setCountdown(null);
-        setMaskProgress(0);
-        setPhase('reveal');
-      }
-
-      const maskElapsed = Math.min(maskDuration, Math.max(0, elapsed - maskStart));
-      setMaskProgress(ease(maskElapsed / maskDuration));
-
-      if (maskElapsed < maskDuration) {
-        frame = window.requestAnimationFrame(animate);
-        return;
-      }
-
-      if (!hasFinished) {
-        hasFinished = true;
-        onDone();
-      }
-    };
-
-    frame = window.requestAnimationFrame(animate);
-    return () => window.cancelAnimationFrame(frame);
-  }, [onCover, onDone, showCountdown, startAt]);
-
-  if (phase === 'cover') {
-    return (
-      <div className="question-transition" aria-hidden="true">
-        <div className="transition-cover-dot" style={{ transform: `translate(-50%, -50%) scale(${coverProgress * coverScale})` }} />
-      </div>
-    );
-  }
-
-  if (phase === 'countdown') {
-    return (
-      <div className="question-transition" aria-hidden="true">
-        <div className="transition-solid-green" />
-        {countdown && <div className="transition-countdown"><span className="transition-countdown-number" key={countdown}>{countdown}</span></div>}
-      </div>
-    );
-  }
-
-  const radius = `${maskProgress * maskRadius}px`;
-  const mask = `radial-gradient(circle at center, transparent 0, transparent ${radius}, #000 calc(${radius} + 1px))`;
-  return (
-    <div className="question-transition transition-reveal" aria-hidden="true">
-      <div className="transition-mask" style={{ WebkitMaskImage: mask, maskImage: mask }} />
-    </div>
-  );
-}
 
 export default App;

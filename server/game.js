@@ -8,6 +8,7 @@ const { prepareAttacks, reflect } = require('./items/attacks');
 const { settleRound, commitRound } = require('./settlement');
 const { Presentations } = require('./presentations');
 const blackjack = require('./items/blackjack');
+const { hostDescription } = require('./items/host-description');
 
 const cleanName = value => String(value || '').replace(/[|\u0000-\u001f\u007f]/g, '').replace(/\s+/g, ' ').trim().slice(0, 28);
 const automated = new Set(['copycat', 'intern', 'personal-skip']);
@@ -39,7 +40,7 @@ class Game {
     if (!cleanName(firstName) || !cleanName(racerName)) throw new Error('Enter both names.');
     const player = {
       id: this.id(), token: this.id(), firstName: cleanName(firstName), racerName: cleanName(racerName),
-      connected: true, score: 0, streak: 0, streakMultiplier: 1, inventory: [], armed: null,
+      connected: true, score: 0, streak: 0, streakMultiplier: 1, inventory: [],
       usedItemRound: null, answerIndex: null, lastAnswerCorrect: null, lastQuestionPoints: 0,
       reviewAdjustment: 0, requests: new Map(), hand: null, attentionAt: 0, breakdown: null
     };
@@ -62,8 +63,10 @@ class Game {
 
   makePresentation(casterId, type, phase, data = {}, mode = 'announcement') {
     const meta = byId[type];
+    const casterName = this.players.get(casterId)?.racerName || 'Racer';
     return { id: this.id(), type, name: meta.name, emoji: meta.emoji, description: meta.description,
-      casterId, casterName: this.players.get(casterId)?.racerName || 'Racer', phase, mode, data,
+      hostDescription: hostDescription(type, casterName),
+      casterId, casterName, phase, mode, data,
       duration: mode === 'coin' ? timing.coinWait : timing.announcement };
   }
 
@@ -72,39 +75,59 @@ class Game {
     if (index >= this.questions.length) return this.finish();
     this.index = index; this.status = 'question'; this.reviewStage = null;
     this.transitionAt = this.now() + timing.lead;
-    const opensAt = this.transitionAt + timing.cover + timing.countdown + timing.reveal;
-    const participants = new Set([...this.players.values()].filter(p => p.connected || p.armed).map(p => p.id));
+    const opensAt = this.transitionAt + timing.cover;
+    const participants = new Set([...this.players.values()].filter(p => p.connected).map(p => p.id));
     const startRanks = new Map(this.sorted().map((p, i) => [p.id, i + 1]));
-    const items = new Map([...this.players.values()].filter(p => p.armed).sort((a, b) => a.armed.order - b.armed.order).map(p => [p.id, { ...p.armed }]));
+    const items = new Map();
     for (const player of this.players.values()) {
       player.answerIndex = null; player.lastAnswerCorrect = null; player.lastQuestionPoints = 0;
-      player.reviewAdjustment = 0; player.breakdown = null; player.hand = null; player.armed = null;
-      if (items.get(player.id)?.type === 'copycat') items.get(player.id).targetId = this.sorted().find(p => p.id !== player.id && participants.has(p.id))?.id;
+      player.reviewAdjustment = 0; player.breakdown = null; player.hand = null;
+      this.refill(player);
     }
-    const effects = new Set([...items.values()].map(item => handlers[item.type].roundEffect).filter(Boolean));
-    const skipped = effects.has('skip');
-    const loud = [...items].filter(([, item]) => skipped ? item.type === 'skip' : byId[item.type].visibility === 'loud');
-    const announcements = loud.map(([id, item]) => this.makePresentation(id, item.type, 'activation'));
-    const answerOpensAt = opensAt + announcements.length * timing.announcement;
-    const duration = (effects.has('ten-seconds') ? handlers['ten-seconds'].seconds : this.seconds) * 1000;
-    const startsAt = answerOpensAt + (!skipped && effects.has('freeze') ? timing.freeze : 0);
-    this.round = { id: this.id(), participants, startRanks, items, answers: new Map(), duration, opensAt, answerOpensAt, startsAt,
-      endsAt: startsAt + duration, effects, hintCounts: new Map(), skipped, reverseCharges: new Set([...items].filter(([, item]) => item.type === 'reverse').map(([id]) => id)),
+    const intro = { startAt: this.transitionAt, coveredAt: opensAt, previewAt: opensAt,
+      countdownAt: null, previewEndsAt: null, revealAt: null, endsAt: null, skipped: false };
+    this.round = { id: this.id(), participants, startRanks, items, answers: new Map(), duration: this.seconds * 1000, intro, opensAt,
+      answerOpensAt: null, startsAt: null, endsAt: null, effects: new Set(), hintCounts: new Map(), skipped: false, reverseCharges: new Set(),
       reversals: [], frozen: new Set(), billTargets: new Set(), potato: null, firstManual: null, autoDone: false, committed: false, frogLeaderboard: false };
-    if (!skipped) prepareAttacks(this);
-    this.presentations.start(announcements, opensAt, () => {
-      if (!skipped) return;
-      for (const [id, item] of items) if (item.type !== 'skip') this.refund(this.players.get(id), item);
-      this.status = 'review'; this.reviewStage = 'ready'; this.transitionAt = null;
-      for (const player of this.players.values()) this.refill(player);
-      if (index === this.questions.length - 1) this.finish();
-    });
     this.onChange();
+  }
+
+  itemWindowOpen() {
+    return this.status === 'question' && !this.round.skipped && this.round.intro.countdownAt === null
+      && this.now() >= this.round.opensAt + timing.pan;
+  }
+
+  startCountdown() {
+    const round = this.round;
+    if (this.status !== 'question' || round.skipped || round.intro.countdownAt !== null) return;
+    if (this.presentations.busy || this.now() < round.intro.previewAt + timing.pan) throw new Error('Wait for the question and power-up announcements.');
+    const countdownAt = this.now() + timing.countdownLead;
+    const previewEndsAt = countdownAt + timing.countdown;
+    const revealAt = previewEndsAt + timing.previewFade;
+    const answerOpensAt = revealAt + timing.reveal;
+    Object.assign(round.intro, { countdownAt, previewEndsAt, revealAt, endsAt: answerOpensAt });
+    round.answerOpensAt = answerOpensAt;
+    round.startsAt = answerOpensAt + (round.effects.has('freeze') ? timing.freeze : 0);
+    round.endsAt = round.startsAt + round.duration;
+    round.reverseCharges = new Set([...round.items].filter(([, item]) => item.type === 'reverse').map(([id]) => id));
+    // Resolve attacks only once selections close, so a newly played Reverse works
+    // regardless of whether its target played their attack first.
+    prepareAttacks(this);
+    this.onChange();
+  }
+
+  finishSkippedQuestion() {
+    for (const [id, item] of this.round.items) if (item.type !== 'skip') this.refund(this.players.get(id), item);
+    this.status = 'review'; this.reviewStage = 'ready'; this.transitionAt = null;
+    for (const player of this.players.values()) this.refill(player);
+    if (this.index === this.questions.length - 1) this.finish();
+    else this.onChange();
   }
 
   endQuestion() {
     if (this.status !== 'question') return;
-    if (this.presentations.busy || this.now() < this.round.answerOpensAt) throw new Error('Let the countdown and announcements finish first.');
+    if (this.round.answerOpensAt === null || this.presentations.busy || this.now() < this.round.answerOpensAt) throw new Error('Let the countdown and announcements finish first.');
+    if (this.round.skipped) return this.finishSkippedQuestion();
     this.runAutomaticAnswers();
     this.round.reveals = settleRound(this);
     this.status = 'review'; this.reviewStage = 'answer';
@@ -115,6 +138,14 @@ class Game {
 
   finishReview() {
     commitRound(this);
+    const results = [...this.round.items].filter(([, item]) => byId[item.type].kind === 'instant')
+      .map(([id, item]) => this.itemResult(this.players.get(id), item));
+    if (results.length) {
+      this.presentations.start(results, this.now(), () => this.completeReview());
+    } else this.completeReview();
+  }
+
+  completeReview() {
     this.reviewStage = 'ready';
     for (const player of this.players.values()) this.refill(player);
   }
@@ -134,12 +165,13 @@ class Game {
     if (message.type === 'reset') { this.reset(); return; }
     if (message.type === 'start' && this.status === 'lobby') this.beginQuestion(0);
     if (message.type === 'next' && this.status === 'review' && message.roundId === this.round.id) this.beginQuestion(this.index + 1);
+    if (message.type === 'start-countdown' && message.roundId === this.round?.id) this.startCountdown();
     if (message.type === 'end-question' && message.roundId === this.round?.id) this.endQuestion();
   }
 
   runAutomaticAnswers() {
     const round = this.round;
-    if (round.autoDone || this.now() < round.startsAt) return;
+    if (round.autoDone || round.startsAt === null || this.now() < round.startsAt) return;
     round.autoDone = true;
     for (const [id, item] of round.items) {
       if (item.type === 'intern') round.answers.set(id, { index: handlers.intern.answer(this.questions[this.index].answerIndex, this.randomInt), elapsed: 0, automatic: true });
@@ -162,7 +194,7 @@ class Game {
     if (round.answers.has(player.id)) return;
     if (automated.has(round.items.get(player.id)?.type)) throw new Error('Your power-up is answering for you.');
     const unlockAt = round.frozen.has(player.id) ? round.startsAt : round.answerOpensAt;
-    if (this.presentations.busy || now < unlockAt || now >= round.endsAt) throw new Error(now >= round.endsAt ? 'Time’s up!' : 'Wait for your answers to unlock.');
+    if (unlockAt === null || this.presentations.busy || now < unlockAt || now >= round.endsAt) throw new Error(round.endsAt !== null && now >= round.endsAt ? 'Time’s up!' : 'Wait for your answers to unlock.');
     if (!Number.isInteger(message.answerIndex) || message.answerIndex < 0 || message.answerIndex > 3) throw new Error('Choose a valid answer.');
     this.runAutomaticAnswers();
     round.answers.set(player.id, { index: message.answerIndex, elapsed: Math.max(0, now - round.startsAt), automatic: false });
@@ -174,7 +206,7 @@ class Game {
   passPotato(player, message) {
     const round = this.round, potato = round?.potato, now = this.now();
     if (this.status !== 'question' || message.roundId !== round?.id || !potato || potato.holderId !== player.id || message.version !== potato.version) throw new Error('That potato is no longer yours.');
-    if (this.presentations.busy || now < round.startsAt || now < potato.nextPassAt || now >= round.endsAt) throw new Error('The potato cannot be passed right now.');
+    if (round.startsAt === null || this.presentations.busy || now < round.startsAt || now < potato.nextPassAt || now >= round.endsAt) throw new Error('The potato cannot be passed right now.');
     const candidates = [...round.participants].filter(id => id !== player.id && this.players.get(id)?.connected);
     if (!candidates.length) throw new Error('No connected racer to pass to.');
     const recipient = candidates[this.randomInt(candidates.length)];
@@ -194,34 +226,57 @@ class Game {
         const size = other.inventory.length; other.inventory = other.inventory.filter(item => item.type !== slot.type); this.refill(other, size);
       }
     }
-    if (byId[slot.type].kind === 'next') {
-      player.armed = { ...slot, order: ++this.activationOrder, ...(message.targetId ? { targetId: message.targetId } : {}) };
-    } else {
-      let presentation;
-      if (slot.type === 'blackjack') {
-        presentation = this.makePresentation(player.id, slot.type, 'result', {}, 'casino');
-        presentation.duration = timing.blackjack;
-        presentation.start = active => {
-          player.score -= message.amount; player.reviewAdjustment -= message.amount;
-          player.hand = blackjack.createHand(message.amount, this.randomInt, this.id(), active.startsAt + timing.blackjack);
-          if (blackjack.value(player.hand.player) === 21 || blackjack.value(player.hand.dealer) === 21) this.settleHand(player);
-        };
-      } else if (slot.type === 'trophy') {
-        presentation = this.makePresentation(player.id, slot.type, 'result', { detail: 'First place on the podium. Actual score unchanged.' });
-        presentation.complete = () => { this.podiumOwner = player.id; };
-      } else {
-        const bonus = 100 * player.streak * player.streakMultiplier;
-        presentation = this.makePresentation(player.id, slot.type, 'result',
-          slot.type === 'cash-out' ? { beforeStreak: player.streak, multiplier: player.streakMultiplier, bonus, before: player.score, after: player.score + bonus } :
-            { detail: 'Phoenix streak equipped', multiplier: player.streakMultiplier * 5 });
-        const commands = handlers[slot.type].commands(player, [...this.players.values()]);
-        presentation.complete = () => applyCommands(this, commands);
-      }
-      this.reviewStage = 'powers';
-      this.presentations.start([presentation], this.now(), () => { this.reviewStage = 'ready'; });
-      this.presentations.tick(this.now());
+    const round = this.round;
+    const item = { ...slot, order: ++this.activationOrder, targetId: message.targetId, amount: message.amount };
+    if (slot.type === 'copycat') item.targetId = this.sorted().find(p => p.id !== player.id && round.participants.has(p.id))?.id;
+    round.items.set(player.id, item);
+    const effect = handlers[item.type].roundEffect;
+    if (effect) round.effects.add(effect);
+    if (effect === 'ten-seconds') round.duration = handlers['ten-seconds'].seconds * 1000;
+    if (byId[item.type].visibility === 'loud') {
+      const announcement = this.makePresentation(player.id, item.type, 'activation');
+      announcement.hostDescription = hostDescription(item.type, player.racerName, this.players.get(item.targetId)?.racerName);
+      this.presentations.append(announcement, this.now());
+      // Each simultaneous use gets its own spotlight; no later-round arming.
+      round.intro.previewAt = this.presentations.active.endsAt + this.presentations.entries.length * timing.announcement;
+    }
+    if (effect === 'skip') {
+      round.skipped = true;
+      const revealAt = round.intro.previewAt;
+      Object.assign(round.intro, { skipped: true, previewEndsAt: revealAt, revealAt, endsAt: revealAt + timing.reveal });
+      round.answerOpensAt = round.intro.endsAt;
     }
     this.onChange();
+  }
+
+  itemResult(player, slot) {
+    let presentation;
+    if (slot.type === 'blackjack') {
+      presentation = this.makePresentation(player.id, slot.type, 'result', {}, 'casino');
+      presentation.duration = timing.blackjack;
+      presentation.start = active => {
+        // Recheck the wager after question effects (e.g. Taxes) settle.
+        const amount = Math.min(slot.amount, Math.max(0, player.score));
+        if (!amount) { active.data = { detail: 'No points left to bet. Item returned.' }; active.endsAt = active.startsAt + timing.announcement; this.refund(player, slot); return; }
+        player.score -= amount; player.reviewAdjustment -= amount;
+        player.hand = blackjack.createHand(amount, this.randomInt, this.id(), active.startsAt + timing.blackjack);
+        if (blackjack.value(player.hand.player) === 21 || blackjack.value(player.hand.dealer) === 21) this.settleHand(player);
+      };
+    } else if (slot.type === 'trophy') {
+      presentation = this.makePresentation(player.id, slot.type, 'result', { detail: 'First place on the podium. Actual score unchanged.' });
+      presentation.complete = () => { this.podiumOwner = player.id; };
+    } else if (!player.streak) {
+      presentation = this.makePresentation(player.id, slot.type, 'result', { detail: 'Your streak ended. Item returned.' });
+      presentation.complete = () => this.refund(player, slot);
+    } else {
+      const bonus = 100 * player.streak * player.streakMultiplier;
+      presentation = this.makePresentation(player.id, slot.type, 'result',
+        slot.type === 'cash-out' ? { beforeStreak: player.streak, multiplier: player.streakMultiplier, bonus, before: player.score, after: player.score + bonus } :
+          { detail: 'Phoenix streak equipped', multiplier: player.streakMultiplier * 5 });
+      const commands = handlers[slot.type].commands(player, [...this.players.values()]);
+      presentation.complete = () => applyCommands(this, commands);
+    }
+    return presentation;
   }
 
   settleHand(player) {
@@ -275,7 +330,8 @@ class Game {
     if (active?.mode === 'coin' && !active.flipped && now >= active.endsAt) { active.flipped = true; active.endsAt = now + timing.interactiveResult; changed = true; }
     for (const player of this.players.values()) if (player.hand?.status === 'playing' && now >= player.hand.expiresAt) { this.settleHand(player); changed = true; }
     changed = this.presentations.tick(now) || changed;
-    if (this.status === 'question' && !this.round.skipped) {
+    if (this.status === 'question' && this.round.skipped && now >= this.round.answerOpensAt && !this.presentations.busy) return this.finishSkippedQuestion();
+    if (this.status === 'question' && !this.round.skipped && this.round.answerOpensAt !== null) {
       const round = this.round;
       if (!round.liveBroadcast && now >= round.answerOpensAt) { round.liveBroadcast = true; changed = true; }
       if (!round.billExpired && now >= round.answerOpensAt + timing.bill) { round.billExpired = true; changed = true; }
@@ -299,7 +355,7 @@ class Game {
   }
 
   hintFor(id) {
-    if (this.status !== 'question' || this.round.items.get(id)?.type !== 'whisper') return '';
+    if (this.status !== 'question' || this.round.startsAt === null || this.round.items.get(id)?.type !== 'whisper') return '';
     const count = Math.max(0, Math.floor((this.now() - this.round.startsAt) / 350));
     const question = this.questions[this.index];
     return handlers.whisper.words(question.choices[question.answerIndex]).slice(0, count).join(' ');
@@ -316,9 +372,9 @@ class Game {
       ...(this.status === 'finished' ? { firstName: p.firstName } : {})
     }));
     const self = own ? players.find(p => p.id === own.id) : null;
-    const presentation = this.presentations.public();
+    const presentation = this.presentations.public(role);
     if (presentation?.mode === 'casino') presentation.hand = blackjack.publicHand(this.players.get(presentation.casterId)?.hand);
-    const bill = this.status === 'question' && own && round.billTargets.has(own.id) && now < round.answerOpensAt + timing.bill;
+    const bill = this.status === 'question' && own && round.billTargets.has(own.id) && (round.answerOpensAt === null || now < round.answerOpensAt + timing.bill);
     const potato = round?.potato;
     return {
       gameId: this.idValue, roundId: round?.id, status: this.status, reviewStage: this.reviewStage,
@@ -327,23 +383,25 @@ class Game {
       questionSeconds: (round?.duration || this.seconds * 1000) / 1000,
       questionStartedAt: round?.startsAt, questionEndsAt: this.status === 'question' ? round.endsAt : null,
       answerOpensAt: round?.answerOpensAt, opensAt: round?.opensAt, transitionAt: this.transitionAt, serverTime: now,
+      intro: this.status === 'question' ? round.intro : null,
+      itemWindowOpensAt: this.status === 'question' ? round.opensAt + timing.pan : null,
       questionFile: this.questionFile, skipped: round?.skipped || false, busyHands: this.busyHands(),
       presentation, presentationBusy: this.presentations.busy,
       reviewEndsAt: this.reviewStage === 'answer' ? round.reviewEndsAt : null,
-      canAdvance: !this.presentations.busy && (this.status === 'lobby' || this.status === 'finished' || this.status === 'review' && this.reviewStage === 'ready' || this.status === 'question' && now >= round.answerOpensAt),
+      canAdvance: !this.presentations.busy && (this.status === 'lobby' || this.status === 'finished' || this.status === 'review' && this.reviewStage === 'ready' || this.status === 'question' && round.answerOpensAt !== null && now >= round.answerOpensAt),
       frogLeaderboard: !!round?.frogLeaderboard,
-      question: question ? { prompt: question.prompt, choices: bill ? question.choices.map(() => handlers.bill.text) : question.choices,
+      question: question ? { ...(role === 'host' ? { prompt: question.prompt } : {}), choices: bill ? question.choices.map(() => handlers.bill.text) : question.choices,
         ...(reviewing && !round.skipped || role === 'host' ? { correctIndex: question.answerIndex } : {}) } : null,
       answeredCount: round?.answers.size || 0, connectedCount: round?.participants.size ?? players.filter(p => p.connected).length,
       players,
       podiumPlayers: this.status === 'finished' ? [...players].sort((a, b) => Number(b.id === this.podiumOwner) - Number(a.id === this.podiumOwner)).slice(0, 3) : [],
-      player: self ? { ...self, answerIndex: own.answerIndex, inventory: own.inventory, armed: own.armed,
+      player: self ? { ...self, answerIndex: own.answerIndex, inventory: own.inventory,
         usedItemRound: own.usedItemRound, hand: blackjack.publicHand(own.hand), hint: this.hintFor(own.id),
         activeItem: this.status === 'question' ? round.items.get(own.id)?.type : null,
         answerOpensAt: round ? round.frozen.has(own.id) ? round.startsAt : round.answerOpensAt : null,
         frozenUntil: this.status === 'question' && round.frozen.has(own.id) ? round.startsAt : null,
-        billUntil: bill ? round.answerOpensAt + timing.bill : null,
-        potato: this.status === 'question' && potato?.holderId === own.id && now >= round.answerOpensAt ? { version: potato.version, nextPassAt: potato.nextPassAt } : null,
+        billUntil: bill && round.answerOpensAt !== null ? round.answerOpensAt + timing.bill : null,
+        potato: this.status === 'question' && round.answerOpensAt !== null && potato?.holderId === own.id && now >= round.answerOpensAt ? { version: potato.version, nextPassAt: potato.nextPassAt } : null,
         spectator: this.status === 'question' && !round.participants.has(own.id),
         lastAnswerCorrect: reviewing ? own.lastAnswerCorrect : null,
         lastQuestionPoints: reviewing ? own.lastQuestionPoints : 0,

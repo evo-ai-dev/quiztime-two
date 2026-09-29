@@ -1,1 +1,1 @@
-{"lead":1000,"cover":1500,"countdown":3000,"reveal":1200,"announcement":5000,"answerReview":5000,"freeze":3000,"bill":5000,"potatoCooldown":700,"coinWait":8000,"interactiveResult":3000,"blackjack":20000}
+{"lead":1000,"cover":1500,"countdown":3000,"countdownLead":250,"previewFade":220,"pan":500,"reveal":1200,"announcement":5000,"answerReview":5000,"freeze":3000,"bill":5000,"potatoCooldown":700,"coinWait":8000,"interactiveResult":3000,"blackjack":20000}

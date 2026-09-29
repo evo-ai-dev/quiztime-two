@@ -7,6 +7,11 @@ class Presentations {
   constructor() { this.clear(); }
   clear() { this.entries = []; this.active = null; this.done = null; this.nextAt = null; }
   get busy() { return !!this.active || !!this.entries.length; }
+  append(entry, now) {
+    if (this.busy) this.entries.push(entry);
+    else this.start([entry], now);
+    this.tick(now);
+  }
   start(entries, startAt, done) {
     if (this.busy) throw new Error('Wait for the current power-up presentation.');
     this.entries = [...entries]; this.nextAt = startAt; this.done = done;
@@ -35,11 +40,12 @@ class Presentations {
     }
     return changed;
   }
-  public() {
+  public(role) {
     const entry = this.active;
     if (!entry) return null;
     const { id, type, emoji, name, casterId, casterName, description, phase, mode, startsAt, endsAt, data, flipped } = entry;
     return { id, type, emoji, name, casterId, casterName, description, phase, mode, startsAt, endsAt,
+      ...(role === 'host' ? { hostDescription: entry.hostDescription } : {}),
       remaining: this.entries.length, flipped: !!flipped,
       data: mode === 'coin' && !flipped ? {} : data };
   }

@@ -1,0 +1,13 @@
+.quiz-content { min-width: 0; max-width: 100%; text-align: center; }
+.quiz-content-inner { width: 100%; min-width: 0; display: flex; flex-direction: column; gap: .4em; align-items: center; line-height: 1.16; letter-spacing: -.025em; }
+.quiz-content-fit { display: flex; align-items: center; justify-content: center; overflow: auto; scrollbar-width: thin; }
+.quiz-content-fit[data-overflow="true"] { align-items: flex-start; }
+.quiz-prose { display: block; width: 100%; white-space: pre-wrap; overflow-wrap: anywhere; }
+.quiz-code { flex: 0 0 auto; width: fit-content; max-width: 100%; margin: 0; padding: .65em .85em; border: 0; border-radius: 12px; background: #122c21; color: #f5fff7; font: 500 .72em/1.4 "SFMono-Regular", Consolas, "Liberation Mono", monospace; letter-spacing: 0; text-align: left; white-space: pre-wrap; overflow-wrap: anywhere; tab-size: 2; }
+.quiz-code code { font: inherit; white-space: inherit; }
+.quiz-content.answer-content { width: 100%; height: 100%; max-width: 100%; font-size: clamp(18px, 2.7vw, 36px); font-weight: 800; }
+.answer-content .quiz-code { font-size: .82em; background: #0002; color: inherit; }
+.host-question-prompt.quiz-content { font-size: clamp(28px, 4.7vw, 68px); overflow: auto; }
+.quadrant-answer:has(.has-code) { padding: clamp(10px, 1.5vh, 18px); }
+.host-question-prompt.has-code { height: auto; min-height: 0; flex: 0 1 40%; max-height: 44%; }
+.correct-answer-content { max-height: 28vh; overflow: auto; margin: 14px auto; font-size: clamp(16px, 2vw, 22px); color: var(--muted); }

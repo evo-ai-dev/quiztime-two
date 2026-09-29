@@ -7,7 +7,7 @@
     "visibility": "loud",
     "rarity": "rare",
     "weight": 3,
-    "description": "Copy the top rival’s next answer and their answer speed. Their mistakes count too."
+    "description": "Copy the top rival’s answer to this question and their answer speed. Their mistakes count too."
   },
   {
     "id": "double",
@@ -85,7 +85,7 @@
     "global": true,
     "rarity": "epic",
     "weight": 2,
-    "description": "The next question has exactly ten answering seconds. Announcements do not use that time."
+    "description": "This question has exactly ten answering seconds. Announcements do not use that time."
   },
   {
     "id": "cash-out",
@@ -118,7 +118,7 @@
     "rarity": "epic",
     "weight": 1,
     "maxUsesPerGame": 1,
-    "description": "Skip the next question for everyone. Keep streaks and refund other queued items. Once per game."
+    "description": "Skip this question for everyone. Keep streaks and refund other used items. Once per game."
   },
   {
     "id": "sucker",

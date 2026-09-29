@@ -187,7 +187,7 @@ input:focus { border-color: var(--bright); box-shadow: 0 0 0 4px #3fa96d20; }
 @keyframes attention-alert-in { from { opacity: 0; transform: translate(-50%, -50%) scale(.92); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 @keyframes incorrect-answer-darken { from { color: var(--answer-text-color); background-color: var(--answer-color); } to { color: #fff; background-color: #000; } }
 @keyframes answer-submit-darken { from { color: var(--answer-text-color); background-color: var(--answer-color); } to { color: #fff; background-color: #000; } }
-.question-transition { position: fixed; z-index: 20; inset: 0; overflow: hidden; pointer-events: none; }
+.question-transition { position: fixed; z-index: 20; inset: 0; overflow: hidden; pointer-events: auto; }
 .transition-cover-dot { position: absolute; top: 50%; left: 50%; width: 100px; height: 100px; border-radius: 50%; background: var(--green); transform-origin: center; }
 .transition-mask { position: absolute; inset: 0; background: var(--green); -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; }
 .transition-solid-green { position: absolute; inset: 0; background: var(--green); }
