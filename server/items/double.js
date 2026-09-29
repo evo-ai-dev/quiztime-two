@@ -1,0 +1,1 @@
+module.exports = { modify(points, randomInt) { if (points <= 0) return { points, label: 'No positive points to flip' }; const win = randomInt(2) === 1; return { points: win ? points * 2 : 0, label: win ? 'Heads! Double points' : 'Tails! No points this time' }; } };

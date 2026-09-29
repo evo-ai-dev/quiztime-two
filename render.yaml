@@ -1,0 +1,16 @@
+# Keep this at the repository root if RibBit is the repository itself.
+services:
+  - type: web
+    name: ribbit
+    runtime: node
+    plan: free
+    buildCommand: npm ci --include=dev && npm test && npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST_PIN
+        generateValue: true
+      - key: QUESTION_FILE
+        value: data/questions.txt

@@ -1,0 +1,53 @@
+.review-screen { width: 100%; height: 100dvh; min-height: 0; overflow: auto; padding: 28px 18px; }
+.review-content { margin: auto; }
+.review-screen .score-box { margin-top: 20px; }
+.review-notes { display: grid; gap: 6px; margin: 0 auto 16px; color: var(--muted); font-size: 13px; }
+.item-tray { width: 100%; margin: 36px auto 0; padding: 24px; border: 1px solid var(--line); border-radius: 24px; background: #fff; text-align: left; box-shadow: 0 18px 60px #15462e0a; }
+.item-tray-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.item-tray-heading .eyebrow { margin: 0 0 8px; font-size: 10px; }
+.item-tray h3 { margin: 0; font-size: 25px; }
+.item-help { border: 0; padding: 10px 0 10px 10px; background: none; color: #38684e; font-size: 12px; text-decoration: underline; }
+.item-caption { margin: 12px 0 18px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.item-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.item-card { --rarity: #4a916b; display: flex; min-width: 0; min-height: 175px; flex-direction: column; align-items: center; justify-content: center; gap: 7px; padding: 12px 8px; border: 2px solid #dbebe1; border-radius: 17px; background: #f4fbf6; color: #123623; text-align: center; transition: box-shadow .2s, border-color .2s; }
+.item-card.rarity-rare { --rarity: #7c5aba; background: #f7f3ff; border-color: #e8def8; }
+.item-card.rarity-epic { --rarity: #9d6717; background: #fff9e9; border-color: #f4e5bd; }
+.item-card.item-selected { border-color: var(--rarity); box-shadow: 0 0 0 3px color-mix(in srgb, var(--rarity) 15%, transparent); }
+.item-card:disabled { cursor: default; opacity: .55; }
+.item-rarity { color: var(--rarity); font-size: 9px; text-transform: uppercase; letter-spacing: .13em; font-weight: 800; }
+.item-emoji { font-size: 38px; line-height: 1.3; }
+.item-card strong { font-size: 13px; line-height: 1.25; }
+.item-card small { font-size: 10px; color: #637469; line-height: 1.3; }
+.item-empty-slot { display: flex; min-height: 175px; flex-direction: column; justify-content: center; align-items: center; gap: 12px; padding: 8px; border: 2px dashed #deebe2; border-radius: 17px; color: #8da498; text-align: center; }
+.item-empty-slot span { font-size: 28px; }.item-empty-slot small { font-size: 11px; }
+.item-detail, .item-rules { margin-top: 18px; padding: 18px; border-radius: 16px; background: #f4f9f5; font-size: 13px; line-height: 1.6; }
+.item-rules { margin: 0 0 16px; }
+.item-detail p { margin: 8px 0 16px; color: #637469; }
+.item-detail label { display: grid; gap: 6px; font-weight: 700; margin-bottom: 14px; }
+.item-detail select { width: 100%; min-height: 46px; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: #fff; color: #123623; font: inherit; }
+.item-confirm { width: 100%; color: #fff; }
+.item-armed { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding: 14px; border-radius: 15px; background: #eaf8ee; color: #235d3e; }
+.item-armed > span { font-size: 28px; }.item-armed div { flex: 1; }.item-armed strong, .item-armed small { display: block; }.item-armed small { margin-top: 4px; font-size: 11px; }
+.blackjack-table { margin-top: 20px; padding: 22px 18px; border-radius: 19px; background: #153b2b; color: white; text-align: center; }
+.blackjack-table .eyebrow { color: #b4e5c7; font-size: 11px; }
+.card-row { margin: 20px 0; }.card-row > span { font-size: 12px; color: #bfd4c8; }
+.playing-cards { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin-top: 10px; }
+.playing-card { display: grid; width: 46px; height: 65px; align-content: center; gap: 2px; border-radius: 7px; background: #fff; color: #14281f; font-size: 23px; font-weight: 800; box-shadow: 0 3px 0 #0003; }
+.playing-card small { font-size: 16px; }.playing-card.red-card { color: #d34752; }.playing-card.card-back { background: #86cba2; }
+.blackjack-actions { display: flex; justify-content: center; gap: 10px; margin-bottom: 16px; }.blackjack-actions .primary { color: #fff; }
+.blackjack-table > small { display: block; font-size: 11px; color: #bed4c7; line-height: 1.6; }.blackjack-result { display: block; font-size: 17px; }
+.client-answer-screen { position: relative; }.client-answer-screen.is-frozen { box-shadow: inset 0 0 60px #5bccff80; }
+.round-effect { position: absolute; z-index: 5; top: 50%; left: 50%; display: flex; align-items: center; gap: 10px; padding: 16px 22px; border-radius: 22px; background: #e4f8ff; color: #235478; transform: translate(-50%, -50%); box-shadow: 0 6px 40px #0003; pointer-events: none; white-space: nowrap; }
+.round-effect > span { font-size: 32px; }.round-effect > small { font-variant-numeric: tabular-nums; }
+.active-item-chip { position: absolute; z-index: 4; left: 50%; bottom: 18px; transform: translateX(-50%); max-width: 90%; width: max-content; padding: 11px 18px; border-radius: 22px; background: #fff; color: #234c34; box-shadow: 0 4px 20px #0002; font-size: 12px; pointer-events: none; text-align: center; }
+.whisper-bubble { flex: 0 0 auto; margin: 0 var(--answer-gap) var(--answer-gap); padding: 16px 20px; border-radius: 18px; background: #fff; color: #213c2c; max-height: 28vh; overflow: auto; }
+.whisper-bubble > span { font-size: 12px; font-weight: 800; }.whisper-bubble small { font-size: 10px; color: var(--muted); font-weight: 400; }.whisper-bubble p { margin: 10px 0 0; font-size: 15px; line-height: 1.5; overflow-wrap: anywhere; }
+.typing-cursor { color: var(--green); animation: cursor-blink .8s steps(2) infinite; }@keyframes cursor-blink { 50% { opacity: 0; } }
+.connection-banner { position: fixed; z-index: 40; top: 10px; left: 50%; transform: translateX(-50%); max-width: calc(100% - 24px); padding: 10px 18px; border-radius: 14px; background: #172e23; color: #fff; font-size: 12px; text-align: center; }
+.host-share-screen { position: relative; }
+.host-footer-left { display: flex; min-width: 0; align-items: center; gap: 12px; }.host-footer-left .secondary { min-height: 36px; font-size: 12px; }
+.host-footer-left > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.host-footer-left .secondary { flex-shrink: 0; }
+.skipped-message { display: grid; place-content: center; flex: 1; text-align: center; gap: 20px; }.skipped-message > span { font-size: 80px; }.skipped-message h2 { font-size: clamp(32px, 5vw, 70px); }
+.toast { z-index: 45; }.streak-summary { color: #927028; font-weight: 700; font-size: 14px; }
+@media(max-width: 560px) { .review-screen.page { padding: 28px 14px; }.item-tray { padding: 18px 12px; }.item-grid { gap: 7px; }.item-card, .item-empty-slot { min-height: 160px; }.item-card strong { font-size: 12px; }.item-tray-heading h3 { font-size: 22px; } }
+@media(prefers-reduced-motion: reduce) { .typing-cursor { animation: none; }.item-card { transition: none; } }

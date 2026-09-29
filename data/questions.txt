@@ -1,0 +1,45 @@
+# One blank line separates questions.
+# The answer can be A, B, C, or D (or 1, 2, 3, or 4).
+# TIME controls the countdown for every question, in seconds.
+TIME: 10
+
+QUESTION: What is  
+```java
+public void calculate() {
+    int outer = 10;
+    
+    // Local code block
+    {
+        int inner = 5;
+        System.out.println(outer + inner); // Works
+    }
+    
+    // System.out.println(inner); // Compile Error: inner is out of scope
+}
+```
+A: 510
+B: 4409
+C: 480
+D: 1340
+ANSWER: A
+
+QUESTION: What language can Michelle speak?
+A: Chinese
+B: French
+C: Spanish
+D: Ukrainian
+ANSWER: A
+
+QUESTION: What language does Alex speak?
+A: Turkish
+B: Spanish
+C: Portuguese
+D: Russian
+ANSWER: D
+
+QUESTION: How much did Sam's ice cream cost?
+A: 4.61
+B: 5.34
+C: 4.70
+D: 6.24
+ANSWER: A

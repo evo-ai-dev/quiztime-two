@@ -1,0 +1,253 @@
+[
+  {
+    "id": "copycat",
+    "name": "Trust Them",
+    "emoji": "🦜",
+    "kind": "next",
+    "visibility": "loud",
+    "rarity": "rare",
+    "weight": 3,
+    "description": "Copy the top rival’s next answer and their answer speed. Their mistakes count too."
+  },
+  {
+    "id": "double",
+    "name": "Double or Nothing",
+    "emoji": "🪙",
+    "kind": "next",
+    "visibility": "loud",
+    "rarity": "common",
+    "weight": 7,
+    "description": "Flip a coin after the answer: double this question’s positive points, or earn zero."
+  },
+  {
+    "id": "siphon",
+    "name": "Siphon Points",
+    "emoji": "🧲",
+    "kind": "next",
+    "visibility": "loud",
+    "target": true,
+    "attack": true,
+    "rarity": "rare",
+    "weight": 4,
+    "description": "Absorb 50% of a rival’s question points. If they lose points, share their loss."
+  },
+  {
+    "id": "whisper",
+    "name": "Walker's Weapon",
+    "emoji": "🤖",
+    "kind": "next",
+    "visibility": "loud",
+    "rarity": "rare",
+    "weight": 4,
+    "description": "A suspiciously helpful chatbot privately types the correct answer, word by word."
+  },
+  {
+    "id": "freeze",
+    "name": "Cold Feet",
+    "emoji": "🧊",
+    "kind": "next",
+    "visibility": "loud",
+    "global": true,
+    "attack": true,
+    "rarity": "epic",
+    "weight": 2,
+    "description": "Freeze everyone else for three seconds while the clock is paused. You can still answer."
+  },
+  {
+    "id": "boost",
+    "name": "Hot Streak",
+    "emoji": "🔥",
+    "kind": "instant",
+    "visibility": "loud",
+    "rarity": "rare",
+    "weight": 4,
+    "description": "Boost your streak’s cash-out value ×5, up to ×25. Wear a phoenix until the streak ends."
+  },
+  {
+    "id": "clear-streaks",
+    "name": "Water",
+    "emoji": "💧",
+    "kind": "next",
+    "visibility": "loud",
+    "global": true,
+    "attack": true,
+    "rarity": "epic",
+    "weight": 2,
+    "maxUsesPerGame": 1,
+    "description": "Extinguish everyone else’s streak after the answer. Yours stays. Once per game."
+  },
+  {
+    "id": "ten-seconds",
+    "name": "Think Fast",
+    "emoji": "⏱️",
+    "kind": "next",
+    "visibility": "loud",
+    "global": true,
+    "rarity": "epic",
+    "weight": 2,
+    "description": "The next question has exactly ten answering seconds. Announcements do not use that time."
+  },
+  {
+    "id": "cash-out",
+    "name": "Cash in Streak",
+    "emoji": "🏦",
+    "kind": "instant",
+    "visibility": "loud",
+    "rarity": "common",
+    "weight": 6,
+    "description": "Trade your streak for 100 × streak × boost points. Watch the streak turn into points."
+  },
+  {
+    "id": "blackjack",
+    "name": "Pond Casino",
+    "emoji": "🃏",
+    "kind": "instant",
+    "visibility": "loud",
+    "wager": true,
+    "rarity": "rare",
+    "weight": 4,
+    "description": "Play blackjack on your phone while everyone watches. Bet up to 1,000 quiz points; wins pay 1:1."
+  },
+  {
+    "id": "skip",
+    "name": "Nope!",
+    "emoji": "🦘",
+    "kind": "next",
+    "visibility": "loud",
+    "global": true,
+    "rarity": "epic",
+    "weight": 1,
+    "maxUsesPerGame": 1,
+    "description": "Skip the next question for everyone. Keep streaks and refund other queued items. Once per game."
+  },
+  {
+    "id": "sucker",
+    "name": "Sucker",
+    "emoji": "🍭",
+    "kind": "next",
+    "visibility": "loud",
+    "rarity": "rare",
+    "weight": 4,
+    "description": "If six or more racers answer incorrectly, double your positive question points."
+  },
+  {
+    "id": "intern",
+    "name": "The Intern",
+    "emoji": "🧑‍💼",
+    "kind": "next",
+    "visibility": "loud",
+    "rarity": "common",
+    "weight": 5,
+    "description": "Your intern answers for you. Exactly 50% chance of being right; a correct answer pays ×1.5."
+  },
+  {
+    "id": "potato",
+    "name": "Hot Potato",
+    "emoji": "🥔",
+    "kind": "next",
+    "visibility": "loud",
+    "global": true,
+    "attack": true,
+    "rarity": "epic",
+    "weight": 2,
+    "description": "Tap the potato to pass it to a random rival. Its final holder earns half their positive question points."
+  },
+  {
+    "id": "prediction",
+    "name": "Prediction",
+    "emoji": "🔮",
+    "kind": "next",
+    "visibility": "silent",
+    "target": true,
+    "rarity": "rare",
+    "weight": 3,
+    "description": "Secretly predict the first racer to submit a manual answer. Get it right to double your positive question points."
+  },
+  {
+    "id": "ribbit",
+    "name": "Ribbit",
+    "emoji": "🐸",
+    "kind": "next",
+    "visibility": "silent",
+    "global": true,
+    "rarity": "common",
+    "weight": 4,
+    "description": "Everyone becomes Frog on the next leaderboard. Scores and real identities remain unchanged."
+  },
+  {
+    "id": "trophy",
+    "name": "Participation Trophy",
+    "emoji": "🏆",
+    "kind": "instant",
+    "visibility": "silent",
+    "rarity": "epic",
+    "weight": 1,
+    "maxUsesPerGame": 1,
+    "description": "Claim first place on the final podium. Your score and the official score-ranked standings do not change."
+  },
+  {
+    "id": "taxes",
+    "name": "Taxes",
+    "emoji": "🧾",
+    "kind": "next",
+    "visibility": "loud",
+    "attack": true,
+    "rarity": "rare",
+    "weight": 3,
+    "description": "Every racer above you at question start contributes 100 points after the answer."
+  },
+  {
+    "id": "reverse",
+    "name": "Uno Reverse Card",
+    "emoji": "🪞",
+    "kind": "next",
+    "visibility": "silent",
+    "rarity": "rare",
+    "weight": 4,
+    "description": "Reflect the first attack against you. For attacks that spare their user, you get that protection and they lose it."
+  },
+  {
+    "id": "blue-shell",
+    "name": "Blue Shell",
+    "emoji": "🐚",
+    "kind": "next",
+    "visibility": "loud",
+    "global": true,
+    "attack": true,
+    "rarity": "epic",
+    "weight": 2,
+    "description": "The first manual answer earns half its positive question points. Being correct will not save them."
+  },
+  {
+    "id": "bill",
+    "name": "Bill",
+    "emoji": "💔",
+    "kind": "next",
+    "visibility": "silent",
+    "target": true,
+    "attack": true,
+    "rarity": "rare",
+    "weight": 3,
+    "description": "Replace a rival’s answer text with “I miss Bill” for the first five playable seconds."
+  },
+  {
+    "id": "wpm",
+    "name": "200WPM",
+    "emoji": "⌨️",
+    "kind": "next",
+    "visibility": "loud",
+    "rarity": "rare",
+    "weight": 4,
+    "description": "Answer correctly within five scoring seconds to double this question’s points."
+  },
+  {
+    "id": "personal-skip",
+    "name": "Skip",
+    "emoji": "⏭️",
+    "kind": "next",
+    "visibility": "silent",
+    "rarity": "common",
+    "weight": 4,
+    "description": "Skip the question only for yourself. Collect 500 points and keep your streak."
+  }
+]

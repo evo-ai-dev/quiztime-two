@@ -1,0 +1,27 @@
+{
+  "name": "ribbit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A local-network, Kahoot-style quiz app.",
+  "main": "server.js",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0",
+    "server": "node --watch server.js",
+    "build": "vite build",
+    "start": "node server.js",
+    "test": "node --test server/test/*.test.js",
+    "test:integration": "node --test server/integration/*.test.js"
+  },
+  "engines": {
+    "node": ">=22.14.0"
+  },
+  "dependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.2",
+    "vite": "^7.1.5"
+  }
+}
